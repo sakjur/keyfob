@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+service KeyFobService {
+    rpc GetKey (GetKeyRequest) returns (EncryptionKey) {}
+    rpc GetOrCreateKey (GetKeyRequest) returns (EncryptionKey) {}
+    rpc DeleteKey (DeleteKeyRequest) returns (google.protobuf.Empty) {}
+}
+
+message GetKeyRequest {
+    Row rowKey = 1;
+    bytes serviceKey = 2;
+}
+
+message DeleteKeyRequest {
+    Row rowKey = 1;
+}
+
+message Row {
+    bytes user_uuid = 1;
+    string namespace = 2;
+}
+
+message EncryptionKey {
+    bytes key = 1;
+}
