@@ -24,6 +24,7 @@ type KeyVault interface {
 	DeleteKey(userid uuid.UUID, category string) error
 }
 
+// StoredKey is the representation of a key from the vault.
 type StoredKey struct {
 	Key      []byte
 	User     uuid.UUID
