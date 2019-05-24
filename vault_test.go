@@ -12,7 +12,7 @@ var serviceKey2 = []byte{0xff, 0xfe, 0xfd, 0xfc, 0xfb, 0xfa, 0xf9, 0xf8, 0xf7, 0
 
 func TestUserKeyPointer_ListUserKeys(t *testing.T) {
 	userKey := getUserKey()
-	vault := NewVault()
+	vault := newFakeVault()
 
 	userKey.Category = "sweden"
 	err := userKey.CreateKey(vault)
@@ -40,7 +40,7 @@ func TestUserKeyPointer_ListUserKeys(t *testing.T) {
 
 func TestUserKeyPointer_DeleteKey(t *testing.T) {
 	userKey := getUserKey()
-	vault := NewVault()
+	vault := newFakeVault()
 
 	err := userKey.CreateKey(vault)
 	if err != nil {
@@ -73,7 +73,7 @@ func TestUserKey_DeriveKey_givenShortServiceKey(t *testing.T) {
 	userKey := getUserKey()
 	userKey.ServiceKey = []byte{0x00, 0x01, 0x02, 0x03}
 
-	vault := NewVault()
+	vault := newFakeVault()
 
 	err := userKey.CreateKey(vault)
 	if err != nil {
@@ -92,7 +92,7 @@ func TestUserKey_DeriveKey_givenShortServiceKey(t *testing.T) {
 
 func TestUserKey_DeriveKey_simple(t *testing.T) {
 	userKey := getUserKey()
-	vault := NewVault()
+	vault := newFakeVault()
 
 	err := userKey.CreateKey(vault)
 	if err != nil {
@@ -115,7 +115,7 @@ func TestUserKey_DeriveKey_simple(t *testing.T) {
 
 func TestUserKey_DeriveKey_differentServices(t *testing.T) {
 	userKey := getUserKey()
-	vault := NewVault()
+	vault := newFakeVault()
 
 	err := userKey.CreateKey(vault)
 	if err != nil {

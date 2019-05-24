@@ -10,7 +10,7 @@ import (
 var errUserNotFound = errors.New("User not found")
 var errKeyNotFound = errors.New("Key not found")
 
-func NewVault() KeyVault {
+func newFakeVault() KeyVault {
 	return &fakeKeyVault{
 		Keys: make(map[uuid.UUID]map[string][]byte),
 	}
