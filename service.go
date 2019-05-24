@@ -59,6 +59,9 @@ func (s KeyFobService) ListKeys(ctx context.Context, req *proto.ListKeysRequest)
 
 	userKey := UserKeyPointer{UserID: userid, ServiceKey: req.ServiceKey}
 	stored, err := userKey.ListUserKeys(s.Vault)
+	if err != nil {
+		return nil, err
+	}
 
 	keys := make([]*proto.EncryptionKey, len(stored))
 	for i, key := range stored {
