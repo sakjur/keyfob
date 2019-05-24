@@ -1,7 +1,6 @@
 package bolt
 
 import (
-	"encoding/json"
 	"errors"
 	"time"
 
@@ -39,7 +38,37 @@ func (v *vault) Close() {
 	_ = v.db.Close()
 }
 
-func (v *vault) GetKey(userid uuid.UUID, namespace string) ([]byte, error) {
+func (v *vault) ListKeys(userid uuid.UUID) ([]*keyfob.StoredKey, error) {
+	keys := []*keyfob.StoredKey{}
+
+	err := v.db.View(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket(bucketUserKeyStore)
+		if bucket == nil {
+			return errNoSuchKey
+		}
+
+		userbucket := bucket.Bucket(userid[:])
+		if userbucket == nil {
+			return errNoSuchKey
+		}
+
+		err := userbucket.ForEach(func(k, v []byte) error {
+			keys = append(keys, &keyfob.StoredKey{
+				Category: string(k),
+				Key:      v,
+			})
+			return nil
+		})
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return keys, nil
+}
+
+func (v *vault) GetKey(userid uuid.UUID, category string) (*keyfob.StoredKey, error) {
 	var key []byte
 
 	err := v.db.View(func(tx *bbolt.Tx) error {
@@ -53,17 +82,20 @@ func (v *vault) GetKey(userid uuid.UUID, namespace string) ([]byte, error) {
 			return errNoSuchKey
 		}
 
-		storedKey := userbucket.Get([]byte(namespace))
+		storedKey := userbucket.Get([]byte(category))
 		if storedKey == nil {
 			return errNoSuchKey
 		}
 		key = storedKey
 		return nil
 	})
-	return key, err
+	return &keyfob.StoredKey{
+		Key:      key,
+		Category: category,
+	}, err
 }
 
-func (v *vault) InsertKey(userid uuid.UUID, namespace string, key []byte) error {
+func (v *vault) InsertKey(userid uuid.UUID, category string, key []byte) error {
 	return v.db.Update(func(tx *bbolt.Tx) error {
 		bucket, err := tx.CreateBucketIfNotExists(bucketUserKeyStore)
 		if err != nil {
@@ -75,7 +107,7 @@ func (v *vault) InsertKey(userid uuid.UUID, namespace string, key []byte) error 
 			return err
 		}
 
-		row := []byte(namespace)
+		row := []byte(category)
 		curr := userbucket.Get(row)
 		if curr != nil {
 			// Key already exists, skip insertion.
@@ -86,7 +118,7 @@ func (v *vault) InsertKey(userid uuid.UUID, namespace string, key []byte) error 
 	})
 }
 
-func (v *vault) DeleteKey(userid uuid.UUID, namespace string) error {
+func (v *vault) DeleteKey(userid uuid.UUID, category string) error {
 	return v.db.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket(bucketUserKeyStore)
 		if bucket == nil {
@@ -98,18 +130,6 @@ func (v *vault) DeleteKey(userid uuid.UUID, namespace string) error {
 			return nil
 		}
 
-		return userbucket.Delete([]byte(namespace))
-	})
-}
-
-func serializeRowKey(userid uuid.UUID, namespace string) ([]byte, error) {
-	type rowKey struct {
-		userid    string
-		namespace string
-	}
-
-	return json.Marshal(rowKey{
-		userid:    userid.String(),
-		namespace: namespace,
+		return userbucket.Delete([]byte(category))
 	})
 }

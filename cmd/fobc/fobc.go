@@ -13,12 +13,12 @@ import (
 	"google.golang.org/grpc"
 )
 
-var serviceKey = "000102030405060708090a0b0c0d0e0f"
+var defaultServiceKey = "000102030405060708090a0b0c0d0e0f"
 var defaultUserID = "7F5CB5F1-32E7-4FD5-87CA-D366617624F6"
 
-var operations = map[string]func(c proto.KeyFobServiceClient, userid string, namespace string, servicekey string){
-	"create": fnGetKey(true),
-	"get":    fnGetKey(false),
+var operations = map[string]func(c proto.KeyFobServiceClient, userid string, category string, servicekey string){
+	"create": fnCreateKey(),
+	"get":    fnListKeys(),
 }
 
 func main() {
@@ -28,8 +28,8 @@ func main() {
 	}
 
 	userid := flag.String("userid", defaultUserID, "UUID for a user")
-	namespace := flag.String("namespace", "none", "Namespace")
-	serviceKey := flag.String("servicekey", serviceKey, "Unique key for the calling service")
+	category := flag.String("category", "none", "Category")
+	serviceKey := flag.String("servicekey", defaultServiceKey, "Unique key for the calling service")
 
 	flag.Parse()
 	op := flag.Arg(0)
@@ -42,44 +42,65 @@ func main() {
 
 	fob := proto.NewKeyFobServiceClient(conn)
 
-	operation(fob, *userid, *namespace, *serviceKey)
+	operation(fob, *userid, *category, *serviceKey)
 }
 
-func fnGetKey(createIfNotExists bool) func(c proto.KeyFobServiceClient, userid string, namespace string, servicekey string) {
-	return func(c proto.KeyFobServiceClient, userid string, namespace string, servicekey string) {
-		req := &proto.GetKeyRequest{RowKey: &proto.Row{
-			Namespace: namespace,
-		}}
-
+func fnCreateKey() func(c proto.KeyFobServiceClient, userid string, namespace string, servicekey string) {
+	return func(c proto.KeyFobServiceClient, userid string, category string, servicekey string) {
 		u, err := uuid.Parse(userid)
 		if err != nil {
 			log.Panic(err)
 		}
 
-		req.RowKey.UserUuid = u[:]
+		req := &proto.GenerateKeyRequest{
+			UserUuid:   u[:],
+			Category:   category,
+			ServiceKey: []byte(servicekey),
+		}
 
-		kb := []byte(servicekey)
-		req.ServiceKey = make([]byte, 2*len(kb))
-		_, err = hex.Decode(req.ServiceKey, kb)
+		key, err := c.GenerateKey(context.Background(), req)
+		if err != nil {
+			log.Panic("Got error on key generation: ", err)
+		}
+
+		log.Printf("DERIVED KEY [%s] %x", key.Category, key.Key)
+	}
+}
+
+func fnListKeys() func(c proto.KeyFobServiceClient, userid string, category string, servicekey string) {
+	return func(c proto.KeyFobServiceClient, userid string, category string, servicekey string) {
+		u, err := uuid.Parse(userid)
 		if err != nil {
 			log.Panic(err)
 		}
 
-		var key *proto.EncryptionKey
-		if createIfNotExists {
-			key, err = c.GetOrCreateKey(context.Background(), req)
-		} else {
-			key, err = c.GetKey(context.Background(), req)
+		req := &proto.ListKeysRequest{
+			UserUuid:   u[:],
+			ServiceKey: serviceKeyBytes(servicekey),
 		}
+
+		keys, err := c.ListKeys(context.Background(), req)
 		if err != nil {
 			log.Panic(err)
 		}
 
-		if len(key.Key) == 0 {
+		if len(keys.Keys) == 0 {
 			fmt.Print("No key found")
 			return
 		}
 
-		fmt.Printf("Got key: %x", key.Key)
+		for _, key := range keys.Keys {
+			fmt.Printf("DERIVED KEY [%s] %x\n", key.Category, key.Key)
+		}
 	}
+}
+
+func serviceKeyBytes(servicekey string) []byte {
+	kb := []byte(servicekey)
+	bytes := make([]byte, 2*len(kb))
+	_, err := hex.Decode(bytes, kb)
+	if err != nil {
+		log.Panic(err)
+	}
+	return bytes
 }

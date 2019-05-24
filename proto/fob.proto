@@ -3,25 +3,32 @@ syntax = "proto3";
 import "google/protobuf/empty.proto";
 
 service KeyFobService {
-    rpc GetKey (GetKeyRequest) returns (EncryptionKey) {}
-    rpc GetOrCreateKey (GetKeyRequest) returns (EncryptionKey) {}
+    rpc ListKeys (ListKeysRequest) returns (ListKeysResponse) {}
+    rpc GenerateKey (GenerateKeyRequest) returns (EncryptionKey) {}
     rpc DeleteKey (DeleteKeyRequest) returns (google.protobuf.Empty) {}
 }
 
-message GetKeyRequest {
-    Row rowKey = 1;
+message ListKeysRequest {
+    bytes user_uuid = 1;
     bytes serviceKey = 2;
 }
 
-message DeleteKeyRequest {
-    Row rowKey = 1;
+message ListKeysResponse {
+    repeated EncryptionKey keys = 1;
 }
 
-message Row {
+message GenerateKeyRequest {
     bytes user_uuid = 1;
-    string namespace = 2;
+    string category = 2;
+    bytes serviceKey = 3;
+}
+
+message DeleteKeyRequest {
+    bytes user_uuid = 1;
+    string category = 2;
 }
 
 message EncryptionKey {
-    bytes key = 1;
+    string category = 1;
+    bytes key = 2;
 }
