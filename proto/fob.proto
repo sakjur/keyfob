@@ -10,7 +10,7 @@ service KeyFobService {
 
 message ListKeysRequest {
     bytes user_uuid = 1;
-    bytes serviceKey = 2;
+    bytes service_key = 2;
 }
 
 message ListKeysResponse {
@@ -20,7 +20,7 @@ message ListKeysResponse {
 message GenerateKeyRequest {
     bytes user_uuid = 1;
     string category = 2;
-    bytes serviceKey = 3;
+    bytes service_key = 3;
 }
 
 message DeleteKeyRequest {
